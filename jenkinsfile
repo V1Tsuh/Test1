@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Клонируем репозиторий Git
+                git branch: 'master', url:'git@github.com:V1Tsuh/Test1.git', dir('C:\\work')
+            }
+        }
+        stage('Restore') {
+            steps {
+                script {
+                    // Переходим в директорию проекта
+                    dir('C:\\work') {
+                        // Выполняем dotnet restore
+                        bat 'dotnet restore Test.sln'
+                    }
+                }
+            }
+        }
+        stage('Build and Publish') {
+            steps {
+                script {
+                    bat 'dotnet build Test.sln -c Release'
+                    bat 'dotnet publish -c Release -o ./publish'
+                }
+            }
+        }
+         stage('Build Docker Image') {
+            steps {
+                script {
+                    // Сборка Docker образа
+                    docker.build("my-docker-image:latest", "-f Dockerfile.linux .")
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Пуш Docker образа в ваш репозиторий
+                    docker.withRegistry('git@github.com:V1Tsuh/Test1.git', 'docker-credentials') {
+                        docker.image("my-docker-image:latest").push()
+                    }
+                }
+            }
+        }
+    }
+}
